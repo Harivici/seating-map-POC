@@ -24,7 +24,6 @@ const CARD_OPTIONS = {
 }
 
 export default function PaymentForm({paymentId}) {
-    console.log('paymentId', paymentId)
     const [success, setSuccess ] = useState(false)
     const stripe = useStripe()
     const elements = useElements()
@@ -41,7 +40,7 @@ export default function PaymentForm({paymentId}) {
     if(!error) {
         try {
             const {id} = paymentMethod
-            const response = await fetch("http://localhost:3001/api/payment/gateway?paymentId="+paymentId, {
+            const response = await fetch("http://localhost:3000/api/payment/gateway?paymentId="+paymentId, {
                 amount: 90000,
                 id
             })

@@ -4,24 +4,25 @@ import StripeContainer from '@/components/StripeContainer'
 export default function Home() {
   const [ticketType, setTicketType] = useState(null)
   const [eventDetails, setEventDetails] = useState(null)
-  const [selectedItems, setSelectedItems] = useState([])
+  const [selectedItems, setSelectedItems] = useState([]) //Our fake cart
   const [shoppingCart, setShoppingCart] = useState([])
   const [reservationToken, setReservationToken] = useState(undefined)
   const [checkoutIdAndSecret, setCheckoutIdAndSecret] = useState(null)
   const [email, setEmail] = useState(null)
   const [paymentFormId, setPaymentFormId] = useState(null)
-  // const eventId = "62cb23d7b055d2a351a17055";
-  const eventId = '643f6cecc109316e1b058e70'//'643558941fe2aebaae76dd81';
-
+  
+  // const eventId = '642ccf05f3622e50a284b00e' // Single Event Test 2
+  // const eventId = '643558941fe2aebaae76dd81' // Single Event Test 
+  const eventId = '643f6cecc109316e1b058e70' // ANZAC event test with seat maps
+  const vivenuEventId = 'anzac-kpbde6' // ANZAC event test with seat maps 
+  // const vivenuEventId = 'single-event-test-p8re7g' // Single Event Test 
+  // const vivenuEventId = 'seating-event-test-2-xnclsn' // Single Event Test 2
   const coreUrl = "https://vivenu.dev"
   const baseUrl = "https://seatmap.vivenu.dev";
 
   let seatingEvent;
   let childEventIds;
 
-  // Our fake cart
-  // let selectedItems = [];
-  // let reservationToken = undefined;
   
   const handleScriptLoad = () => {
     loadEvent()
@@ -38,7 +39,6 @@ export default function Home() {
     const result = await response.json();
     // eventDetails = result;
     if (result) {
-      // setEventName(result.name)
       setEventDetails(result)
     }
     onEventInfo(result);
@@ -275,11 +275,11 @@ export default function Home() {
       <br />
       
       <div style={{textAlign: 'center'}}>
-        <a href="https://vivenu.dev/event/single-event-test-p8re7g?useEmbed=true">Out of box solution Modal - Buy Tickets</a>
+        <a href={`https://vivenu.dev/event/${vivenuEventId}?useEmbed=true`}>Out of box solution Modal - Buy Tickets</a>
       </div>
       <br />
       <div style={{textAlign: 'center'}}>
-        <a target='_blank' href="https://vivenu.dev/event/single-event-test-p8re7g">Out of box solution by using External link - Buy Tickets</a>
+        <a target='_blank' href={`https://vivenu.dev/event/${vivenuEventId}`}>Out of box solution by using External link - Buy Tickets</a>
       </div>
       <br />
       <div style={{textAlign: 'center'}}>
