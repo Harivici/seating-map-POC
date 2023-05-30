@@ -1,6 +1,9 @@
 import { useEffect, useState } from 'react'
 import Script from 'next/script'
 import StripeContainer from '@/components/StripeContainer'
+import axios from 'axios'
+import * as qs from 'qs'
+
 export default function Home() {
   const [ticketType, setTicketType] = useState(null)
   const [eventDetails, setEventDetails] = useState(null)
@@ -10,15 +13,19 @@ export default function Home() {
   const [checkoutIdAndSecret, setCheckoutIdAndSecret] = useState(null)
   const [email, setEmail] = useState(null)
   const [paymentFormId, setPaymentFormId] = useState(null)
-  
+  const [payFormDetails, setPayFormDetails] = useState(null)
+  const[paymentSuccess, setPaymentSuccess] =  useState(false)
   // const eventId = '642ccf05f3622e50a284b00e' // Single Event Test 2
   // const eventId = '643558941fe2aebaae76dd81' // Single Event Test 
   const eventId = '643f6cecc109316e1b058e70' // ANZAC event test with seat maps
   const vivenuEventId = 'anzac-kpbde6' // ANZAC event test with seat maps 
-  // const vivenuEventId = 'single-event-test-p8re7g' // Single Event Test 
-  // const vivenuEventId = 'seating-event-test-2-xnclsn' // Single Event Test 2
+  
   const coreUrl = "https://vivenu.dev"
   const baseUrl = "https://seatmap.vivenu.dev";
+  const vcxStagingUrl = "https://vcxdataplatformqa-eval-prod.apigee.net"
+  const client_id = 'HdutMo9TAVrSPOx5Wc2Ds5ZALceWkYRo'
+  const client_secret = 'ZUAykBuhL1ngYZW2'
+  const vivenuApiKey = 'key_eb4188bd1b920bae03ea8deab794e2d99293be9d715ff2bfef08ca2b8be489041d40ccb367db52139a89575c4c94163e'
 
   let seatingEvent;
   let childEventIds;
@@ -33,7 +40,7 @@ export default function Home() {
         method: "GET",
         headers: {
             'Accept': 'application/json',
-            'Content-Type': 'application/json',
+            'Content-Type': 'application/json'
         },
     });
     const result = await response.json();
@@ -106,6 +113,55 @@ export default function Home() {
     });
   }
   
+  const  getAccessToken =  async () => {
+    const endpoint = vcxStagingUrl + '/oauth/accesstoken?grant_type=client_credentials'
+    const requestBody = qs.stringify({
+      client_id,
+      client_secret,
+      grant_type: 'client_credentials',
+      scope: 'client_credentials'
+    })
+
+    const response = await axios.post(endpoint, requestBody, {
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+    })
+
+    const accessTokenRes = response.data
+
+    console.log('accessTokenRes', accessTokenRes)
+    return accessTokenRes.access_token
+  }
+  const vcxPaymentIntent = async (checkoutId, secret, token) => {
+    const response = await fetch(vcxStagingUrl + "/payment/v1/payment-intent/vivenu/0?checkout_id="+checkoutId+"&secret="+secret, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer " + token
+        }
+    });
+    const paymentIntentRes =  await response.json();
+    console.log('paymentIntentRes', paymentIntentRes);
+    if (paymentIntentRes) {
+      setPaymentFormId(paymentIntentRes)
+    }
+    
+  }
+  // const vivenuPurchaseIntent = async (tickets) => {
+  //   const response = await fetch(coreUrl + "/api/purchaseintents", {
+  //     method: "POST",
+  //     body: JSON.stringify({
+  //       eventId,
+  //       tickets
+  //     }),
+  //     headers: {
+  //       "Content-Type": "application/json",
+  //       "Authorization": "Bearer " + vivenuApiKey
+  //     }
+  //   });
+  //   const purchaseIntentRes =  await response.json();
+  //   console.log('purchaseIntentRes', purchaseIntentRes)
+  //   return purchaseIntentRes._id
+  // }
   const createCheckout = async () => {
     const response = await fetch(coreUrl + "/api/checkout", {
         method: "POST",
@@ -129,7 +185,16 @@ export default function Home() {
     if (checkoutRes) {
       setCheckoutIdAndSecret(checkoutRes)
     }
+    // const tickets = checkoutRes.items[0].tickets
     // return json.transaction;
+    // vivenu purchase intent
+    // const purchaseIntentId = await vivenuPurchaseIntent(tickets)
+    // // get access token
+    // const token = await getAccessToken()
+    // // vcx payment intent
+    // const checkoutId = checkoutRes._id
+    // const secret = checkoutRes.secret
+    // await vcxPaymentIntent(checkoutId, secret, token)
   };
   
   const SeatingService = {
@@ -207,9 +272,49 @@ export default function Home() {
 
         const checkoutCustomerDetails = await response.json();
         console.log('checkoutCustomerDetails', checkoutCustomerDetails)
-        paymentRequest()
+        // paymentRequest()
+        // get access token
+        const token = await getAccessToken()
+        // vcx payment intent
+        const checkoutId = checkoutCustomerDetails._id
+        const secret = checkoutCustomerDetails.secret
+        await vcxPaymentIntent(checkoutId, secret, token)
 
   }
+  const finalPaymentSubmission = async () => {
+    console.log('payFormDetails', payFormDetails)
+    const {card, stripe} = payFormDetails
+    const stripeSecret = paymentFormId.message.client_secret
+    const result = await stripe.confirmCardPayment(stripeSecret, {
+      payment_method: {
+        card,
+        billing_details: {
+          email,
+          name: 'Hari suddapalli',
+          phone: '0432023177',
+          address: {
+            postal_code: '3029'
+          }
+        }
+      }
+    })
+    if (result.paymentIntent.status === 'succeeded') {
+      setPaymentSuccess(true)
+      console.log('setPaymentSuccess')
+    }
+    console.log('result', result)
+  }
+  const newTickets = () => {
+    setShoppingCart([])
+    setSelectedItems([])
+    setReservationToken(undefined)
+    setCheckoutIdAndSecret(null)
+    setEmail(null)
+    setPaymentFormId(null)
+    setPayFormDetails(null)
+    setPaymentSuccess(false)
+  }
+  // back end apis start
   const paymentRequest = async () => {
     const url = coreUrl + '/api/payments/requests'
     const payload = {
@@ -251,6 +356,7 @@ export default function Home() {
     }
     console.log('paymentRequestProcessor', paymentRequestProcessorResp)
   }
+// back end api finished
 
   const iframeDisplay = () => {
     const iframe = document.createElement("iframe");
@@ -279,7 +385,7 @@ export default function Home() {
       </div>
       <br />
       <div style={{textAlign: 'center'}}>
-        <a target='_blank' href={`https://vivenu.dev/event/${vivenuEventId}`}>Out of box solution by using External link - Buy Tickets</a>
+        <a target='_blank' href={`https://vivenu.dev/event/${eventDetails && eventDetails.url}`}>Out of box solution by using External link - Buy Tickets</a>
       </div>
       <br />
       <div style={{textAlign: 'center'}}>
@@ -356,9 +462,14 @@ export default function Home() {
                       <span className="price">A${shoppingCartTotal}.00</span>
                     </div>
                 <br/><br/>
-              {checkoutIdAndSecret
+              {paymentSuccess ? <div>
+                <h3>Well done, Payments success</h3>
+                <br/>
+                <button className='btn' onClick={newTickets}>Book Again</button>
+                </div>
+              :checkoutIdAndSecret
                 ?
-                paymentFormId ? <StripeContainer id={paymentFormId}/>
+                paymentFormId ? <StripeContainer paySecrets={paymentFormId} onComplete={(content) => setPayFormDetails(content)} paymentSubmit={finalPaymentSubmission}/>
                 :<div>
                   <input className="email" placeholder="Email" type="text" onChange={(e) => setEmail(e.target.value)}/>
                   <br />

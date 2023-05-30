@@ -11,9 +11,11 @@
   "dependencies": {
     "@stripe/react-stripe-js": "^2.1.0",
     "@stripe/stripe-js": "^1.52.1",
+    "axios": "^1.4.0",
     "eslint": "8.37.0",
     "eslint-config-next": "13.2.4",
     "next": "13.2.4",
+    "qs": "^6.11.1",
     "react": "18.2.0",
     "react-dom": "18.2.0"
   }
